@@ -9,6 +9,7 @@ Aplicación de escritorio en Python que visualiza la serie de Fibonacci con una 
 - Resumen con último valor, suma total y proporción dorada aproximada.
 - Exportación de la serie a CSV y copia directa al portapapeles.
 - Cálculos separados en un módulo reutilizable (`fibonacci.py`).
+- Selector de modo oscuro en la esquina superior derecha para alternar la apariencia.
 
 ## Requisitos
 
