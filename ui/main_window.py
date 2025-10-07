@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from typing import List
+from typing import Dict, List
 
 from fibonacci import FibonacciSummary, generate_fibonacci, summarize
 
@@ -20,20 +20,22 @@ class FibonacciApp:
         self.root.title("Fibonacci Studio")
         self.root.geometry("820x560")
         self.root.minsize(720, 520)
-        self.root.configure(bg="#f4f6fb")
 
+        self.style = ttk.Style()
+        self.dark_mode_var = tk.BooleanVar(value=False)
         self._configure_style()
         self._create_menu()
 
         self.count_var = tk.IntVar(value=15)
         self.scale_var = tk.DoubleVar(value=15)
-        self.status_var = tk.StringVar(value="Ready")
+        self.status_var = tk.StringVar(value="Listo")
         self.summary_last_var = tk.StringVar(value="-")
         self.summary_sum_var = tk.StringVar(value="0")
         self.summary_ratio_var = tk.StringVar(value="-")
         self.current_sequence: List[int] = []
 
         self._build_layout()
+        self._apply_theme()
         self._calculate()
 
     def run(self) -> None:
@@ -41,59 +43,21 @@ class FibonacciApp:
 
     # Layout -----------------------------------------------------------------
     def _configure_style(self) -> None:
-        style = ttk.Style()
         try:
-            style.theme_use("clam")
+            self.style.theme_use("clam")
         except tk.TclError:
             pass
 
-        style.configure(
-            "Root.TFrame",
-            background="#f4f6fb",
-        )
-        style.configure(
-            "Header.TLabel",
-            background="#f4f6fb",
-            font=("Segoe UI Semibold", 18),
-            foreground="#1f2933",
-        )
-        style.configure(
-            "SubHeader.TLabel",
-            background="#f4f6fb",
-            font=("Segoe UI", 11),
-            foreground="#52606d",
-        )
-        style.configure(
-            "Card.TLabelframe",
-            background="#ffffff",
-            foreground="#1f2933",
-        )
-        style.configure(
-            "Card.TLabelframe.Label",
-            font=("Segoe UI Semibold", 10),
-            foreground="#52606d",
-        )
-        style.configure(
-            "CardValue.TLabel",
-            background="#ffffff",
-            font=("Segoe UI Semibold", 16),
-            foreground="#1f2933",
-        )
-        style.configure(
-            "Action.TButton",
-            font=("Segoe UI Semibold", 10),
-        )
-        style.configure(
-            "Treeview.Heading",
-            font=("Segoe UI Semibold", 10),
-        )
-        style.configure(
-            "Status.TLabel",
-            background="#e4e7eb",
-            font=("Segoe UI", 10),
-            foreground="#52606d",
-            padding=(12, 6),
-        )
+        self.style.configure("Header.TLabel", font=("Segoe UI Semibold", 18))
+        self.style.configure("SubHeader.TLabel", font=("Segoe UI", 11))
+        self.style.configure("Card.TLabelframe.Label", font=("Segoe UI Semibold", 10))
+        self.style.configure("CardValue.TLabel", font=("Segoe UI Semibold", 16))
+        self.style.configure("Action.TButton", font=("Segoe UI Semibold", 10))
+        self.style.configure("Toggle.TCheckbutton", font=("Segoe UI", 10))
+        self.style.configure("Treeview.Heading", font=("Segoe UI Semibold", 10))
+        self.style.configure("Treeview", rowheight=24, borderwidth=0)
+        self.style.configure("TSpinbox", arrowsize=16)
+        self.style.configure("Status.TLabel", font=("Segoe UI", 10), padding=(12, 6))
 
     def _create_menu(self) -> None:
         menu_bar = tk.Menu(self.root)
@@ -111,9 +75,20 @@ class FibonacciApp:
         header_frame = ttk.Frame(container, style="Root.TFrame")
         header_frame.pack(fill=tk.X, pady=(0, 18))
 
-        ttk.Label(header_frame, text="Fibonacci Studio", style="Header.TLabel").pack(
-            anchor=tk.W
+        title_row = ttk.Frame(header_frame, style="Root.TFrame")
+        title_row.pack(fill=tk.X)
+
+        ttk.Label(title_row, text="Fibonacci Studio", style="Header.TLabel").pack(
+            side=tk.LEFT
         )
+        ttk.Checkbutton(
+            title_row,
+            text="Modo oscuro",
+            variable=self.dark_mode_var,
+            command=self._toggle_dark_mode,
+            style="Toggle.TCheckbutton",
+        ).pack(side=tk.RIGHT)
+
         ttk.Label(
             header_frame,
             text="Explora y exporta la serie de Fibonacci con estilo profesional.",
@@ -265,7 +240,8 @@ class FibonacciApp:
             ratio = ""
             if index > 0 and sequence[index - 1] != 0:
                 ratio = f"{value / sequence[index - 1]:.6f}"
-            self.tree.insert("", tk.END, values=(index, value, ratio))
+            tags = ("even",) if index % 2 == 0 else ("odd",)
+            self.tree.insert("", tk.END, values=(index, value, ratio), tags=tags)
 
     def _update_summary(self, summary: FibonacciSummary) -> None:
         self.summary_last_var.set(str(summary.last_value) if summary.last_value is not None else "-")
@@ -318,6 +294,123 @@ class FibonacciApp:
             "Acerca de Fibonacci Studio",
             "Fibonacci Studio\n\nVisualiza y exporta de forma cuidada la clasica serie matematica.",
         )
+
+    def _toggle_dark_mode(self) -> None:
+        mode_label = "Modo oscuro activado" if self.dark_mode_var.get() else "Modo claro activado"
+        self._apply_theme()
+        self.status_var.set(mode_label)
+
+    def _apply_theme(self) -> None:
+        palette = self._get_palette()
+
+        self.root.configure(bg=palette["background"])
+        self.style.configure("Root.TFrame", background=palette["background"])
+        self.style.configure("Header.TLabel", background=palette["background"], foreground=palette["text_primary"])
+        self.style.configure("SubHeader.TLabel", background=palette["background"], foreground=palette["text_secondary"])
+        self.style.configure(
+            "Card.TLabelframe",
+            background=palette["surface"],
+            bordercolor=palette["border"],
+            lightcolor=palette["border"],
+            darkcolor=palette["border"],
+            relief="solid",
+        )
+        self.style.configure("Card.TLabelframe.Label", background=palette["surface"], foreground=palette["text_secondary"])
+        self.style.configure("CardValue.TLabel", background=palette["surface"], foreground=palette["text_primary"])
+        self.style.configure(
+            "Action.TButton",
+            background=palette["button_bg"],
+            foreground=palette["button_fg"],
+            bordercolor=palette["button_border"],
+            focusthickness=3,
+            focuscolor=palette["accent"],
+        )
+        self.style.map(
+            "Action.TButton",
+            background=[("pressed", palette["accent"]), ("active", palette["accent_hover"])],
+            foreground=[("pressed", palette["on_accent"]), ("active", palette["on_accent"])],
+        )
+        self.style.configure(
+            "Toggle.TCheckbutton",
+            background=palette["background"],
+            foreground=palette["text_secondary"],
+            focuscolor=palette["accent"],
+        )
+        self.style.map(
+            "Toggle.TCheckbutton",
+            foreground=[("selected", palette["text_primary"])],
+        )
+        self.style.configure(
+            "Treeview",
+            background=palette["surface"],
+            fieldbackground=palette["surface"],
+            foreground=palette["text_primary"],
+            bordercolor=palette["border"],
+        )
+        self.style.map(
+            "Treeview",
+            background=[("selected", palette["accent"])],
+            foreground=[("selected", palette["on_accent"])],
+        )
+        self.style.configure(
+            "Treeview.Heading",
+            background=palette["header_surface"],
+            foreground=palette["text_primary"],
+            bordercolor=palette["border"],
+        )
+        self.style.map(
+            "Treeview.Heading",
+            background=[("active", palette["accent_hover"])],
+            foreground=[("active", palette["on_accent"])],
+        )
+        self.style.configure(
+            "Status.TLabel",
+            background=palette["status_background"],
+            foreground=palette["text_secondary"],
+        )
+
+        if hasattr(self, "tree"):
+            self.tree.tag_configure("even", background=palette["surface"])
+            self.tree.tag_configure("odd", background=palette["surface_alt"])
+
+        for child in self.root.winfo_children():
+            if isinstance(child, ttk.Frame) and child.cget("style") == "Root.TFrame":
+                child.configure(style="Root.TFrame")
+
+    def _get_palette(self) -> Dict[str, str]:
+        if self.dark_mode_var.get():
+            return {
+                "background": "#111827",
+                "surface": "#1f2937",
+                "surface_alt": "#273449",
+                "header_surface": "#1f2937",
+                "status_background": "#1f2937",
+                "text_primary": "#f9fafb",
+                "text_secondary": "#9ca3af",
+                "button_bg": "#1f2937",
+                "button_fg": "#f9fafb",
+                "button_border": "#374151",
+                "border": "#374151",
+                "accent": "#60a5fa",
+                "accent_hover": "#3b82f6",
+                "on_accent": "#0f172a",
+            }
+        return {
+            "background": "#f4f6fb",
+            "surface": "#ffffff",
+            "surface_alt": "#f0f4ff",
+            "header_surface": "#e8eefc",
+            "status_background": "#e4e7eb",
+            "text_primary": "#1f2933",
+            "text_secondary": "#52606d",
+            "button_bg": "#ffffff",
+            "button_fg": "#1f2933",
+            "button_border": "#cbd2d9",
+            "border": "#d9e2ec",
+            "accent": "#2563eb",
+            "accent_hover": "#1d4ed8",
+            "on_accent": "#ffffff",
+        }
 
 
 def launch() -> None:
